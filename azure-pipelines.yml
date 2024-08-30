@@ -45,135 +45,21 @@ stages:
             sonarQubeRunAnalysis: true
             sqMavenPluginVersionChoice: 'pom'
 
-  - stage: Artifacts
-    dependsOn: Test
-    jobs:
-      - job: 'Job_Artifacts'
-        steps:
-        - task: UniversalPackages@0
-          inputs:
-            command: 'publish'
-            publishDirectory: '$(Build.ArtifactStagingDirectory)'
-            feedsToUsePublish: 'internal'
-            vstsFeedPublish: 'e692aa7d-41cf-4e32-9807-6129819692ea/202fedbf-ee96-4a10-a1c0-d563aa6f20b1'
-            vstsFeedPackagePublish: 'universal-package'
-            versionOption: 'patch'
-            packagePublishDescription: 'Universal package to validate all supported Azure artifacts'
-            verbosity: 'Debug'
-            publishedPackageVar: 'adoUniversalPackage'
-          continueOnError: true
-        - task: PublishBuildArtifacts@1
-          inputs:
-            PathtoPublish: '$(System.DefaultWorkingDirectory)'
-            ArtifactName: 'adoBuildArtifact'
-            publishLocation: 'container'
-        - task: PublishPipelineArtifact@1
-          inputs:
-            targetPath: '$(Pipeline.Workspace)'
-            artifact: 'adoPipelineArtifact'
-            publishLocation: 'pipeline'
-
-  - stage: Change
-    dependsOn: Artifacts
-    jobs:
-      - job: 'Job_Change'
-        pool: server
-        steps:
-        - task: InvokeRESTAPI@1
-          inputs:
-            connectionType: 'connectedServiceName'
-            serviceConnection: 'ServiceNow v1 connection'
-            method: 'POST'
-            body: |
-              {
-              "buildNumber":"$(build.buildId)",
-              "isMultiBranch":"false",
-              "branchName":"$(build.sourceBranchName)",
-              "changeRequestDetails":{
-              "autoCloseChange":true,
-              "attributes":{
-              "chg_model":{
-              "name":"Normal"
-              },
-              "assignment_group":"a715cd759f2002002920bde8132e7018"
-              }
-              }
-              }
-            urlSuffix: '/api/sn_devops/v1/devops/orchestration/changeControl?toolId=9b803ea797cc12d0a757bd31f053afe0&projectId=2de0b6e797cc12d0a757bd31f053af91'
-            waitForCompletion: 'true'
-
-  - stage: SonarAnalysis
-    dependsOn: Change
-    jobs:
-      - job: 'Job_SonarAnalysis'
-        steps:
-        - task: SonarCloudPrepare@2
-          inputs:
-            SonarCloud: 'Basic Project 1-SonarCloud connection name'
-            organization: 'ramarajupolanki'
-            scannerMode: 'Other'
-            extraProperties: |
-              # Additional properties that will be passed to the scanner,
-              # Put one key=value per line, example:
-              # sonar.exclusions=**/*.bin
-              sonar.projectKey=ramarajupolanki_ServiceNow-DevOps-Change-Sample
-              sonar.projectName=ServiceNow-DevOps-Change-Sample
-
-        # Below SonarCloudAnalyze@2 and SonarCloudPublish@2 are optional for Maven/Gradle projects
-        # - task: SonarCloudAnalyze@2
-        #   inputs:
-        #     jdkversion: 'JAVA_HOME'
-        # - task: SonarCloudPublish@2
-        #   inputs:
-        #     pollingTimeoutSec: '300'
 
   - stage: AgentTasks
-    dependsOn: SonarAnalysis
+    dependsOn: Test
     jobs:
       - job: 'Job_AgentTasks'
         steps:
         - task: ServiceNow-DevOps-Build-Sonar-Registration@1
           inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
-            sonarProjectKey: 'ramarajupolanki_ServiceNow-DevOps-Change-Sample'
+            connectedServiceName: 'demo'
+            sonarProjectKey: 'pramaraju96_ServiceNow-DevOps-Change-Sample'
             sonarInstanceUrl: 'https://sonarcloud.io'
-        # - task: ServiceNow-DevOps-Build-Security-Results@1
-        #   inputs:
-        #     connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
-        #     securityResultAttributes: |
-        #       {
-        #        "scanner": "Veracode",
-        #        "applicationName": "PetStoreAPI-Github",
-        #        "securityToolId": "b7c86e2b974c12d0a757bd31f053af3d"
-              # }
-            # securityResultAttributes: |
-            #   {
-            #    "scanner": "Veracode",
-            #    "applicationName": "VeraDemo10",
-            #    "buildVersion": "21 Mar 2023 Static",
-            #    "securityToolId": "25eba2ad1b674210bb7c96c6b04bcbbf"
-            #   }
 
-        # - task: ServiceNow-DevOps-Build-Security-Results@1
-        #   inputs:
-        #     connectedServiceName: 'checkmarx05-Basic Project1-ServiceNow DevOps Service Connection'
-        #     securityResultAttributes: |
-        #       {
-        #       "scanner": "Checkmarx SAST", 
-        #       "projectId": "1094"
-        #       }
-        # - task: ServiceNow-DevOps-Build-Security-Results@1
-        #   inputs:
-        #     connectedServiceName: 'checkmarx01-Basic Project1-ServiceNow DevOps Service Connection'
-        #     securityResultAttributes: |
-        #       {
-        #       "scanner": "Checkmarx One",
-        #       "projectName": "pramaraju96/ServiceNow-DevOps-Change-Sample",
-        #       "projectId": "880a8a8e-8627-48b5-9293-4f33a59f0f9c"
-        #       }
         - task: ServiceNow-DevOps-Agent-Artifact-Registration@1
           inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
+            connectedServiceName: 'demo'
             artifactsPayload: |
               {
                 "artifacts": [
@@ -181,20 +67,20 @@ stages:
                       "name": "agent-artifact-alpha",
                       "version": "1.$(Build.BuildId)",
                       "semanticVersion": "1.$(Build.BuildId).0",
-                      "repositoryName": "RR - all tasks CI pipeline"
+                      "repositoryName": "DevOps CI Sample"
                     }
                 ]
               }
         - task: ServiceNow-DevOps-Agent-Package-Registration@1
           inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
+            connectedServiceName: 'demo'
             packageName: 'app-devops-change-velocity'
             artifactsPayload: |
               {
                   "artifacts": [
                   {
                       "name": "agent-artifact-alpha",
-                      "repositoryName": "RR - all tasks CI pipeline",
+                      "repositoryName": "DevOps CI Sample",
                       "version": "1.$(build.buildId)",
                       "pipelineName":"$(system.teamProject)/$(build.definitionName)",
                       "taskExecutionNumber":"$(build.buildId)",
@@ -206,26 +92,6 @@ stages:
                   "stageName":"$(system.jobDisplayName)",
                   "branchName":"$(build.sourceBranchName)"
               }
-        - task: ServiceNow-DevOps-Agent-Get-Change@1
-          inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
-            projectName: '$(system.teamProject)'
-            pipelineName: '$(build.definitionName)'
-            stageName: 'Change'
-            jobName: 'Job_Change'
-            buildNumber: '$(build.buildId)'
-            branchName: '$(Build.SourceBranchName)'
-          name: agentGetChange
-        - task: ServiceNow-DevOps-Agent-Update-Change@1
-          inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
-            changeRequestNumber: '$(agentGetChange.changeRequestNumber)'
-            changeRequestDetails: |
-              {
-              "short_description":"Updating the short_description from ServiceNow DevOps Agent Update Change",
-              "work_notes":"Updating the work_notes from ServiceNow DevOps Agent Update Change",
-              "description":"Updating change description from ServiceNow DevOps Agent Update Change"
-              }
 
   - stage: ServerTasks
     dependsOn: AgentTasks
@@ -233,54 +99,9 @@ stages:
       - job: 'Job_ServerTasks'
         pool: server
         steps:
-        - task: ServiceNow-DevOps-Server-Artifact-Registration@1
-          inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
-            artifactRegistrationPayload: |
-              {
-              "artifacts":[
-              {
-              "name":"server-artifact-beta",
-              "version":"1.$(build.buildId)",
-              "semanticVersion":"1.$(build.buildId).0",
-              "repositoryName":"RR - all tasks CI pipeline"
-              }
-              ],
-              "pipelineName":"$(system.teamProject)/$(build.definitionName)",
-              "taskExecutionNumber":"$(build.buildId)",
-              "stageName":"$(system.jobDisplayName)",
-              "attemptNumber":"$(system.jobAttempt)",
-              "branchName":"$(build.sourceBranchName)"
-              }
-            artifactToolIdExists: false
-        - task: ServiceNow-DevOps-Server-Package-Registration@1
-          inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
-            packageRegistrationPayload: |
-              {
-              "name":"app-devops-change-velocity",
-              "artifacts":[
-              {
-              "name":"server-artifact-beta",
-              "repositoryName":"RR - all tasks CI pipeline",
-              "version":"1.$(build.buildId)",
-              "pipelineName":"$(system.teamProject)/$(build.definitionName)",
-              "taskExecutionNumber":"$(build.buildId)",
-              "stageName":"$(system.jobDisplayName)",
-              "attemptNumber":"$(system.jobAttempt)",
-              "branchName":"$(build.sourceBranchName)"
-              }
-              ],
-              "pipelineName":"$(system.teamProject)/$(build.definitionName)",
-              "taskExecutionNumber":"$(build.buildId)",
-              "stageName":"$(system.jobDisplayName)",
-              "attemptNumber":"$(system.jobAttempt)",
-              "branchName":"$(build.sourceBranchName)"
-              }
-            artifactToolIdExists: false
         - task: ServiceNow-DevOps-Server-Change-Acceleration@1
           inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
+            connectedServiceName: 'demo'
             UpstreamJob: 'Job_AgentTasks'
             changeRequestDetails: |
               {
@@ -298,45 +119,3 @@ stages:
               "work_notes":"This is a sample pipeline work_notes to be added to the change"
               }
               }
-        - task: ServiceNow-DevOps-Server-Get-Change@1
-          inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
-            projectName: '$(system.teamProject)'
-            pipelineName: '$(build.definitionName)'
-            stageName: '$(System.StageName)'
-            jobName: '$(System.JobDisplayName)'
-            buildNumber: '$(build.buildId)'
-            branchName: '$(Build.SourceBranchName)'
-          name: serverGetChange
-        - task: ServiceNow-DevOps-Server-Update-Change@1
-          inputs:
-            connectedServiceName: 'devopswashingtondc14-Basic Project1-ServiceNow DevOps Service Connection'
-            changeRequestNumber: '$(serverGetChange.changeRequestNumber)'
-            changeRequestDetails: |
-              {
-              "short_description":"Updating the short_description from ServiceNow DevOps Server Update Change",
-              "work_notes":"Updating the work_notes from ServiceNow DevOps Server Update Cha",
-              "description":"Updating the change description from ServiceNow DevOps Server Update Change"
-              }
-        - task: InvokeRESTAPI@1
-          inputs:
-            connectionType: 'connectedServiceName'
-            serviceConnection: 'ServiceNow v1 connection'
-            method: 'POST'
-            body: |
-              {
-              "buildNumber":"$(build.buildId)",
-              "isMultiBranch":"false",
-              "branchName":"$(build.sourceBranchName)",
-              "changeRequestDetails":{
-              "autoCloseChange":true,
-              "attributes":{
-              "chg_model":{
-              "name":"Normal"
-              },
-              "assignment_group":"a715cd759f2002002920bde8132e7018"
-              }
-              }
-              }
-            urlSuffix: '/api/sn_devops/v1/devops/orchestration/changeControl?toolId=9b803ea797cc12d0a757bd31f053afe0&projectId=2de0b6e797cc12d0a757bd31f053af91'
-            waitForCompletion: 'true'
