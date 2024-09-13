@@ -37,7 +37,7 @@ jobs:
           version: latest
         env:
           JF_URL: "https://servicenowdemo.jfrog.io/"
-          JF_USERNAME: "sunil.yerubandi@servicenow.com"
+          JF_USER: "sunil.yerubandi@servicenow.com"
           JF_PASSWORD: "DevOps1!"
 
       - name: Push to Artifactory and Scan Image
