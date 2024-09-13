@@ -45,7 +45,7 @@ jobs:
         #   DOCKER_IMAGE: ${{ matrix.environment.artifactory_url }}/nordlb-cloud-docker-dev/${{ github.repository }}:${{ github.event.release.tag_name }}
         run: |
           export JFROG_CLI_NAME="${{ github.workspace }}"
-          jfrog rt dp ${{ github.repository }} ${{ github.run_id }} --target-repo=felipe-repo
+          jfrog rt dp rama-build-name 1 --target-repo=felipe-repo
 
           # echo "Push Image"
           # jfrog rt dp ${{ env.DOCKER_IMAGE }} ${{ env.ARTIFACTORY_REPOSITORY_DEV }}
